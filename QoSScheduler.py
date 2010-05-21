@@ -1,6 +1,8 @@
 #scheduler
 import MySQLdb
 import DomainObjects
+import statistics
+
 
 #function that creates Domain objects - node, cpu and fan from the result of the sql query
 def createNodes(r):
@@ -48,12 +50,45 @@ def createNodes(r):
 		nodeObject.setNetCpuParamsForNode()
 		nodeObject.setNetFanParamsForNode()
 		nodeList.append(nodeObject)
-	
 	return nodeList
-			
-
 
 #End of function
+
+#function to read weight from the files
+def getWeights(filename):
+	infile = file(filename,'r')
+	map = {}
+	for line in infile.readlines():
+		map[line.split(":")[0]] = int(line.split(":")[1])
+	infile.close()
+	return map
+
+#function to get node weights
+def getNodeWeights(nodeList,pw,gw):
+	nodePowerUsageList = []
+	nodeMemUsageList = []
+	nodeNwSRUsageList = []
+	nodePerformanceList = []
+	nodeNetNodeTempList = []
+	nodeNetNodeLoadList = []
+	nodeNetNodeSpeedList = []
+	nodeNetNodeCacheList = []
+	nodeNetNodeFanSpeedList = []
+
+	for node in nodeList:
+		nodePowerUsageList.append(node.powerUsage)
+		nodeMemUsageList.append(node.memUsage)
+		nodeNwSRUsageList.append(node.nwSRUsage)
+		nodePerformanceList.append(node.performance)
+		nodeNetNodeTempList.append(node.netNodeTemp)
+		nodeNetNodeLoadList.append(node.netNodeLoad)
+		nodeNetNodeSpeedList.append(node.netNodeSpeed)
+		nodeNetNodeCacheList.append(node.netNodeCache)
+		nodeNetNodeFanSpeedList.append(node.netNodeFanSpeed)
+
+	nodePowerUsageGrade = statistics.stat.histogram(nodePowerUsageList,len(gw.values()))
+	print nodePowerUsageGrade
+
 
 conn = MySQLdb.connect(host="172.16.1.5",user="hpc",passwd="hpc",db="hpcQoS")
 
@@ -74,5 +109,13 @@ nodeList = createNodes(r)
 for node in nodeList:
 	node.display()
 	node.displayNetParams()
-		
+
+gw = getWeights("GradeWeight.txt")
+print gw
+
+pw = getWeights("ParamsCredit.txt")
+print pw	
+
+getNodeWeights(nodeList,pw,gw)
+	
 conn.close()

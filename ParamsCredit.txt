@@ -1,0 +1,8 @@
+powerUsage:5
+memUsage:4
+nwSUsage:3
+performance:4
+cpuTemp:3
+cpuLoad:4
+cpuCache:3
+fanSpeed:4
