@@ -1,3 +1,6 @@
+# This code is released under GPL v3.So feel free to modify and distribute.
+#Author:Mahesh C
+#Release date:27-may-2010
 import MySQLdb
 import os
 import signal
@@ -10,6 +13,7 @@ def sigHandler(signum,frame):
 		exit(0)
 
 signal.signal(signal.SIGINT,sigHandler)
+# This will check each node status using ping
 while(1):
 	cursor.execute ("SELECT distinct  nId from qosMain")
 	status=[]

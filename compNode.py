@@ -1,12 +1,23 @@
+# This code is released under GPL v3.So feel free to modify and distribute.
+#Author:Mahesh C
+#Release date:27-may-2010
+
+
+
 import sys
 import time
 import os
 from qosDb import *
 import platform
 
-TIMEFORMAT = "%m/%d/%y %H:%M:%S"
+
+
+#update time interval
+#TODO add a configuration file and update from that file
 INTERVAL = 2
 
+#This class represents a computing node .
+#Arguments : Node identification ,Data base object
 class compNode():
 	
 	def __init__(self,nodeId,dbObject):
@@ -28,12 +39,14 @@ class compNode():
 		self.fanSpeed=[]
 		self.fanNumber=[]
 
+	#Find memeory information	
 	def findMemInfo(self):
 		fp=open("/proc/meminfo","r")
 		memTotal=fp.readline().split(":")[1].replace(" ","").split("k")[0]
         	memFree=fp.readline().split(":")[1].replace(" ","").split("k")[0]
 		self.memUsage=memFree+"/"+memTotal
 		fp.close()
+	#Find network usage
 	def findnwUsage(self):
 		sndBytes="0"
 		rcvBytes="0"
@@ -49,6 +62,8 @@ class compNode():
 				
 		self.nwUsage=self.nwUsage[:len(self.nwUsage)-1]		
 		fp.close()
+	#Find power usage.This will work only if the node have ipmi support .
+	#TODO Read static values from a file
 	def findPowUsage(self):
 		self.powUsage="100"
 		pipe=os.popen("ipmitool sensor | grep AVG")
@@ -56,9 +71,11 @@ class compNode():
 			self.powUsage=pow.split("|")[1].strip()
 			
 		pipe.close()
+	#find FLOPS value
+	#TODO Read static values from a file
 	def findFlops(self):
 		self.flops="10"
-	
+	#Find basic cpu feature set from /proc/cpuinfo
 	def findCpuFeatures(self):
 		self.cpuNumber=[]
 		self.cpuName=[]
@@ -77,7 +94,7 @@ class compNode():
 			if data.find("cache size")>-1:
 				self.cpuCache.append(data.split(":")[1].replace("\n","").replace("\t"," ").replace("KB",""))			
 					
-			
+	#Get cpu usage time from /proc/stat		
 	def getTimeList(self,cpu):
 		statFile = file("/proc/stat", "r")
    		statList = statFile.readlines()
@@ -89,7 +106,7 @@ class compNode():
        			timeList[j] = int(timeList[j])
 		return timeList
 
-
+	#Find cpu usage for an INTERVAL
 	def findCpuLoad(self):
 		
 		t1=[]
@@ -117,7 +134,8 @@ class compNode():
 				cpuPct = 100 - (dt[len(dt) - 1] * 100.00 / sum(dt))
 			self.cpuLoad.append(str(cpuPct))
 		
-
+        #Find cpu temperature from lmsensors module .This will work only for
+	#intel coretemp and winchip w83627ehf chips
 	#TODO remove lmsensors dependency	
 	def findCpuTemp(self):
 		self.cpuTemp=[]
@@ -135,7 +153,8 @@ class compNode():
 				self.cpuTemp.append(temp)
 				ft.close()		
 			f.close()
-
+        #Find cpu ative power state from /proc/acpi/processor/CPUX/power
+	#This values are useless for QOS 
 	def findCpuState(self):
 		self.cpuState=[]
 		for filename in os.listdir("/proc/acpi/processor"):
@@ -144,7 +163,9 @@ class compNode():
 			self.cpuState.append(pstate)
 			fp.close()
 		
-	
+	#Find fans speed in RPM
+        #Find power usage.This will work only if the node have ipmi support or lmsensors
+	#support 
 	def findFans(self):
 		self.fanName=[]
 		self.fanSpeed=[]
@@ -182,7 +203,7 @@ class compNode():
 
 
 	
-
+       #Call other methods and update the QOS database
 	def updateDb(self):
 		self.findCpuFeatures()
 		self.findCpuLoad()
@@ -194,31 +215,22 @@ class compNode():
 		self.findFlops()
 		self.findFans()		
 		cpuData=zip(self.cpuNumber,self.cpuName,self.cpuTemp,self.cpuLoad,self.cpuSpeed,self.cpuCache,self.cpuState)
-	        print cpuData,self.cpuNumber,self.cpuName,self.cpuTemp,self.cpuLoad,self.cpuSpeed,self.cpuCache,self.cpuState
+	      
 		if self.db.checkNodeExists(self.nId)==0:
 			self.db.addNode(self.nId,[self.powUsage,self.memUsage,self.nwUsage,"ON",self.flops])
 			for i in range(0,len(self.cpuNumber)):
-				self.db.addCpus(self.nId,[self.cpuNumber[i],self.cpuName[i],self.cpuTemp[i],self.cpuLoad[i],self.cpuSpeed[i],self.cpuType,self.cpuCache[i],self.cpuState[i]])
+				self.db.addCpus(self.nId,[self.cpuNumber[i],self.cpuName[i],self.cpuTemp[i],\
+				self.cpuLoad[i],self.cpuSpeed[i],self.cpuType,self.cpuCache[i],self.cpuState[i]])
 			for i in range(0,len(self.fanNumber)):
 				self.db.addFans(self.nId,[self.fanNumber[i],self.fanName[i],self.fanSpeed[i],'OK'])
 		else:
 			self.db.updateNode(self.nId,[self.powUsage,self.memUsage,self.nwUsage,"ON",self.flops])
 			for i in range(0,len(self.cpuNumber)):
-				self.db.updateCpus(self.nId,[self.cpuNumber[i],self.cpuName[i],self.cpuTemp[i],self.cpuLoad[i],self.cpuSpeed[i],self.cpuType,self.cpuCache[i],self.cpuState[i]])
+				self.db.updateCpus(self.nId,[self.cpuNumber[i],self.cpuName[i],self.cpuTemp[i],\
+				self.cpuLoad[i],self.cpuSpeed[i],self.cpuType,self.cpuCache[i],self.cpuState[i]])
 			for i in range(0,len(self.fanNumber)):
 				self.db.updateFans(self.nId,[self.fanNumber[i],self.fanName[i],self.fanSpeed[i],'OK'])
 		
 		
 
 
-
-
-
-
-
-"""
-db=qosDb('172.16.150.252','hpc','hpc','hpcQoS')
-cn=compNode(2,db)
-cn.updateDb()
-db.close()
-"""
