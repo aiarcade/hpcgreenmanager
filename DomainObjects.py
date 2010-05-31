@@ -53,8 +53,9 @@ class Node:
 			"\n\t10.net node Cache:"+str(self.netNodeCache)+" " \
 			"\n\t11.net node fan speed:"+str(self.netNodeFanSpeed)	
 class CPU:
-        def __init__(self,nId,cpuName,cpuTemp,cpuLoad,cpuSpeed,cpuType,cpuCache,cpuState):
+        def __init__(self,nId,cId,cpuName,cpuTemp,cpuLoad,cpuSpeed,cpuType,cpuCache,cpuState):
                 self.nId = nId
+		self.cId = cId
                 self.cpuName = cpuName
                 self.cpuTemp = cpuTemp
                 self.cpuLoad = cpuLoad
@@ -65,6 +66,7 @@ class CPU:
 	def display(self):
         	print "CPU:" \
                      +"\n\tnId : "+str(self.nId)+" " \
+		     +"\n\tcId : "+str(self.cId)+" " \
                       +"\n\tcpuName: "+str(self.cpuName)+" " \
                         +"\n\tcpuTemp : "+str(self.cpuTemp)+" " \
                         +"\n\tcpuLoad : "+str(self.cpuLoad)+" " \
@@ -74,8 +76,9 @@ class CPU:
 			+"\n\tcpuState : "+str(self.cpuState)
 
 class Fan:
-        def __init__(self,nId,fanName,fanSpeed,fanState):
+        def __init__(self,nId,fId,fanName,fanSpeed,fanState):
                 self.nId = nId
+		self.fId = fId
                 self.fanName = fanName
                 self.fanSpeed = fanSpeed
                 self.fanState = fanState
@@ -83,6 +86,7 @@ class Fan:
 	def display(self):
 		 print "Fan:" \
                      +"\n\tnId : "+str(self.nId)+" " \
+		     +"\n\tfId : "+str(self.fId)+ " " \
                       +"\n\tfanName : "+str(self.fanName)+" " \
                         +"\n\tfanSpeed : "+str(self.fanSpeed)+" " \
                         +"\n\tfanState : "+str(self.fanState)+" " 
