@@ -2,7 +2,7 @@
 import MySQLdb
 import DomainObjects
 import statistics
-
+from operator import itemgetter
 
 #function that creates Domain objects - node, cpu and fan from the result of the sql query
 def createNodes(r):
@@ -44,25 +44,26 @@ def createNodes(r):
 			if(itr%2==0):
 				nnc+=1
 			itr+=1
-		nwSRUsage/=nnc   
+		#nwSRUsage/=nnc   
 		nodeObject = DomainObjects.Node(k,float(v[0]["qosMain_1.powerUsage"]),nodeMemUsage,nwSRUsage,v[0]["qosMain_1.status"],float(v[0]["qosMain_1.performance"]))
 		
 		cpuDict = {}
 		fanDict = {}
 
 		for tuple in v:
-			if(not cpuDict.has_key(tuple["nodeCpus_1.cpuName"])):
+			if(not cpuDict.has_key(tuple["nodeCpus_1.cpuId"])):
 				cpuObject = DomainObjects.CPU(k,tuple["nodeCpus_1.cpuId"],tuple["nodeCpus_1.cpuName"],float(tuple["nodeCpus_1.cpuTemp"]),float(tuple["nodeCpus_1.cpuLoad"]),float(tuple["nodeCpus_1.cpuSpeed"]),tuple["nodeCpus_1.cpuType"],float(tuple["nodeCpus_1.cpuCache"]),tuple["nodeCpus_1.cpuState"])		
-				cpuDict[tuple["nodeCpus_1.cpuName"]] = cpuObject
+				cpuDict[tuple["nodeCpus_1.cpuId"]] = cpuObject
 
-			if(not fanDict.has_key(tuple["nodeFans_1.fanName"])):
+			if(not fanDict.has_key(tuple["nodeFans_1.fanId"])):
                                 fanObject = DomainObjects.Fan(k,tuple["nodeFans_1.fanId"],tuple["nodeFans_1.fanName"],float(tuple["nodeFans_1.fanspeed"]),tuple["nodeFans_1.state"])
-				fanDict[tuple["nodeFans_1.fanName"]] = fanObject
+				fanDict[tuple["nodeFans_1.fanId"]] = fanObject
 
 		nodeObject.setCpuAndFans(cpuDict.values(),fanDict.values())
 		nodeObject.setNetCpuParamsForNode()
 		nodeObject.setNetFanParamsForNode()
 		nodeList.append(nodeObject)
+
 	return nodeList
 
 #End of function
@@ -89,19 +90,72 @@ def getNodeWeights(nodeList,pw,gw):
 	nodeNetNodeFanSpeedList = []
 
 	for node in nodeList:
-		nodePowerUsageList.append(node.powerUsage)
-		nodeMemUsageList.append(node.memUsage)
-		nodeNwSRUsageList.append(node.nwSRUsage)
+		nodePowerUsageList.append(node.powerUsage*-1)
+		nodeMemUsageList.append(node.memUsage*-1)
+		nodeNwSRUsageList.append(node.nwSRUsage*-1)
 		nodePerformanceList.append(node.performance)
-		nodeNetNodeTempList.append(node.netNodeTemp)
-		nodeNetNodeLoadList.append(node.netNodeLoad)
+		nodeNetNodeTempList.append(node.netNodeTemp*-1)
+		nodeNetNodeLoadList.append(node.netNodeLoad*-1)
 		nodeNetNodeSpeedList.append(node.netNodeSpeed)
 		nodeNetNodeCacheList.append(node.netNodeCache)
-		nodeNetNodeFanSpeedList.append(node.netNodeFanSpeed)
+		nodeNetNodeFanSpeedList.append(node.netNodeFanSpeed*-1)
 
 	nodePowerUsageGrade = statistics.stat.histogram(nodePowerUsageList,len(gw.values()))
 	print nodePowerUsageGrade
-	return nodePowerUsageGrade
+
+	nodeMemUsageGrade = statistics.stat.histogram(nodeMemUsageList,len(gw.values()))
+        print nodeMemUsageGrade
+
+	nodeNwSRUsageGrade = statistics.stat.histogram(nodeNwSRUsageList,len(gw.values()))
+        print nodeNwSRUsageGrade
+
+	nodePerformanceGrade = statistics.stat.histogram(nodePerformanceList,len(gw.values()))
+        print nodePerformanceGrade
+
+	nodeNetNodeTempGrade = statistics.stat.histogram(nodeNetNodeTempList,len(gw.values()))
+        print nodeNetNodeTempGrade
+
+	nodeNetNodeLoadGrade = statistics.stat.histogram(nodeNetNodeLoadList,len(gw.values()))
+        print nodeNetNodeLoadGrade
+
+	nodeNetNodeSpeedGrade = statistics.stat.histogram(nodeNetNodeSpeedList,len(gw.values()))
+        print nodeNetNodeSpeedGrade
+
+	nodeNetNodeCacheGrade = statistics.stat.histogram(nodeNetNodeCacheList,len(gw.values()))
+        print nodeNetNodeCacheGrade
+
+	nodeNetFanSpeedGrade = statistics.stat.histogram(nodeNetNodeFanSpeedList,len(gw.values()))
+        print nodeNetFanSpeedGrade
+
+	nodeWeight = {}
+	netPw = 0
+	for node in nodeList:
+		if(netPw==0):
+			netPw += pw['powerUsage']+pw['memUsage']+pw['nwSRUsage']+pw['performance']+pw['cpuTemp']+pw['cpuLoad']+pw['cpuSpeed']+pw['cpuCache']+pw['fanSpeed']
+		nw = 0
+		nw +=nodePowerUsageGrade[node.powerUsage*-1]*pw['powerUsage']
+		nw +=nodeMemUsageGrade[node.memUsage*-1]*pw['memUsage']
+		nw +=nodeNwSRUsageGrade[node.nwSRUsage*-1]*pw['nwSRUsage']
+                nw +=nodePerformanceGrade[node.performance]*pw['performance']
+		nw +=nodeNetNodeTempGrade[node.netNodeTemp*-1]*pw['cpuTemp']
+                nw +=nodeNetNodeLoadGrade[node.netNodeLoad*-1]*pw['cpuLoad']
+		nw +=nodeNetNodeSpeedGrade[node.netNodeSpeed]*pw['cpuSpeed']
+                nw +=nodeNetNodeCacheGrade[node.netNodeCache]*pw['cpuCache']
+	
+		print "\nNodeWeight = "+str(nw) 
+		print "nNetPw = "+str(netPw)
+
+                nw = float(nw)/float(netPw) #calculating on a cpu basis
+		nw = (float(nw) + float(nodeNetFanSpeedGrade[node.netNodeFanSpeed*-1]))/2            
+               
+		nodeWeight[node.nId] = nw
+
+	sortedNodeWeight = sorted(nodeWeight.items(), key=itemgetter(1))
+
+	print "\n\nHere is printing the node Weights"
+	print sortedNodeWeight
+
+	return sortedNodeWeight
 
 conn = MySQLdb.connect(host="172.16.1.5",user="hpc",passwd="hpc",db="hpcQoS")
 
