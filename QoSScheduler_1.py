@@ -5,6 +5,8 @@ import statistics
 from operator import itemgetter
 
 #function that creates Domain objects - node, cpu and fan from the result of the sql query
+#as well create an object with all the max values
+
 def createNodes(r):
 	numRows = r.num_rows()
 	print  "\nNumber of Rows = ",numRows
@@ -27,6 +29,11 @@ def createNodes(r):
 
 	nodeList = []
 	
+	maxNode = DomainObjects.Node(0,0,0,0,'ON',0);
+  	maxNode.setCpuAndFans({}.values(),{}.values())
+        maxNode.setNetCpuParamsForNode()
+        maxNode.setNetFanParamsForNode()
+
 	#printing the different node details    
 	for k,v in tupleDict.items():
         	print "Node id = %d, nodes = %s" % (k,v)
@@ -46,7 +53,20 @@ def createNodes(r):
 			itr+=1
 		#nwSRUsage/=nnc   
 		nodeObject = DomainObjects.Node(k,float(v[0]["qosMain.powerUsage"]),nodeMemUsage,nwSRUsage,v[0]["qosMain.status"],float(v[0]["qosMain.performance"]))
+
+		if(nodeObject.powerUsage>maxNode.powerUsage):
+			maxNode.powerUsage = nodeObject.powerUsage
 		
+		if(nodeObject.memUsage>maxNode.memUsage):
+                        maxNode.memUsage = nodeObject.memUsage
+
+		if(nodeObject.nwSRUsage>maxNode.nwSRUsage):
+                        maxNode.nwSRUsage = nodeObject.nwSRUsage
+
+		if(nodeObject.performance>maxNode.performance):
+                        maxNode.performance = nodeObject.performance
+
+
 		cpuDict = {}
 		fanDict = {}
 
@@ -62,9 +82,26 @@ def createNodes(r):
 		nodeObject.setCpuAndFans(cpuDict.values(),fanDict.values())
 		nodeObject.setNetCpuParamsForNode()
 		nodeObject.setNetFanParamsForNode()
+	
+		if(nodeObject.netNodeTemp>maxNode.netNodeTemp):
+                        maxNode.netNodeTemp = nodeObject.netNodeTemp
+
+                if(nodeObject.netNodeLoad>maxNode.netNodeLoad):
+                        maxNode.netNodeLoad = nodeObject.netNodeLoad
+
+                if(nodeObject.netNodeSpeed>maxNode.netNodeSpeed):
+                        maxNode.netNodeSpeed = nodeObject.netNodeSpeed
+
+                if(nodeObject.netNodeCache>maxNode.netNodeCache):
+                        maxNode.netNodeCache = nodeObject.netNodeCache
+
+		if(nodeObject.netNodeFanSpeed>maxNode.netNodeFanSpeed):
+                        maxNode.netNodeFanSpeed = nodeObject.netNodeFanSpeed
+		
+	
 		nodeList.append(nodeObject)
 
-	return nodeList
+	return nodeList,maxNode
 
 #End of function
 
@@ -78,7 +115,7 @@ def getWeights(filename):
 	return map
 
 #function to get node weights
-def getNodeWeights(nodeList,pw,gw):
+def getNodeWeights(nodeList,maxNode,pw,gw):
 	nodePowerUsageList = []
 	nodeMemUsageList = []
 	nodeNwSRUsageList = []
@@ -90,15 +127,15 @@ def getNodeWeights(nodeList,pw,gw):
 	nodeNetNodeFanSpeedList = []
 
 	for node in nodeList:
-		nodePowerUsageList.append(node.powerUsage*-1)
-		nodeMemUsageList.append(node.memUsage*-1)
-		nodeNwSRUsageList.append(node.nwSRUsage*-1)
-		nodePerformanceList.append(node.performance)
-		nodeNetNodeTempList.append(node.netNodeTemp*-1)
-		nodeNetNodeLoadList.append(node.netNodeLoad*-1)
-		nodeNetNodeSpeedList.append(node.netNodeSpeed)
-		nodeNetNodeCacheList.append(node.netNodeCache)
-		nodeNetNodeFanSpeedList.append(node.netNodeFanSpeed*-1)
+		nodePowerUsageList.append(node.powerUsage*-1/maxNode.powerUsage)
+		nodeMemUsageList.append(node.memUsage*-1/maxNode.memUsage)
+		nodeNwSRUsageList.append(node.nwSRUsage*-1/maxNode.nwSRUsage)
+		nodePerformanceList.append(node.performance/maxNode.performance)
+		nodeNetNodeTempList.append(node.netNodeTemp*-1/maxNode.netNodeTemp)
+		nodeNetNodeLoadList.append(node.netNodeLoad*-1/maxNode.netNodeLoad)
+		nodeNetNodeSpeedList.append(node.netNodeSpeed/maxNode.netNodeSpeed)
+		nodeNetNodeCacheList.append(node.netNodeCache/maxNode.netNodeCache)
+		nodeNetNodeFanSpeedList.append(node.netNodeFanSpeed*-1/maxNode.netNodeFanSpeed)
 
 	print "Power :"
 	print nodePowerUsageList
@@ -146,21 +183,21 @@ def getNodeWeights(nodeList,pw,gw):
 			netPw += pw['powerUsage']+pw['memUsage']+pw['nwSRUsage']+pw['performance']+pw['cpuTemp']+pw['cpuLoad']+pw['cpuSpeed']+pw['cpuCache']+pw['fanSpeed']
 		nw = 0
 #		print "\nhello\n"+str(gw[str(nodePowerUsageGrade[node.powerUsage*-1])])
-		nw +=gw[str(nodePowerUsageGrade[node.powerUsage*-1])]*pw['powerUsage']
-		nw +=gw[str(nodeMemUsageGrade[node.memUsage*-1])]*pw['memUsage']
-		nw +=gw[str(nodeNwSRUsageGrade[node.nwSRUsage*-1])]*pw['nwSRUsage']
-                nw +=gw[str(nodePerformanceGrade[node.performance])]*pw['performance']
-		nw +=gw[str(nodeNetNodeTempGrade[node.netNodeTemp*-1])]*pw['cpuTemp']
-                nw +=gw[str(nodeNetNodeLoadGrade[node.netNodeLoad*-1])]*pw['cpuLoad']
-		nw +=gw[str(nodeNetNodeSpeedGrade[node.netNodeSpeed])]*pw['cpuSpeed']
-		nw +=gw[str(nodeNetNodeCacheGrade[node.netNodeCache])]*pw['cpuCache']
+		nw +=gw[str(nodePowerUsageGrade[node.powerUsage*-1/maxNode.powerUsage])]*pw['powerUsage']
+		nw +=gw[str(nodeMemUsageGrade[node.memUsage*-1/maxNode.memUsage])]*pw['memUsage']
+		nw +=gw[str(nodeNwSRUsageGrade[node.nwSRUsage*-1/maxNode.nwSRUsage])]*pw['nwSRUsage']
+                nw +=gw[str(nodePerformanceGrade[node.performance/maxNode.performance])]*pw['performance']
+		nw +=gw[str(nodeNetNodeTempGrade[node.netNodeTemp*-1/maxNode.netNodeTemp])]*pw['cpuTemp']
+                nw +=gw[str(nodeNetNodeLoadGrade[node.netNodeLoad*-1/maxNode.netNodeLoad])]*pw['cpuLoad']
+		nw +=gw[str(nodeNetNodeSpeedGrade[node.netNodeSpeed/maxNode.netNodeSpeed])]*pw['cpuSpeed']
+		nw +=gw[str(nodeNetNodeCacheGrade[node.netNodeCache/maxNode.netNodeCache])]*pw['cpuCache']
 
 	
 		print "\nNodeWeight = "+str(nw) 
 		print "nNetPw = "+str(netPw)
 
                 nw = float(nw)/float(netPw) #calculating on a cpu basis
-		nw = (float(nw) + float(gw[str(nodeNetFanSpeedGrade[node.netNodeFanSpeed*-1])]))/2            
+		nw = (float(nw) + float(gw[str(nodeNetFanSpeedGrade[node.netNodeFanSpeed*-1/maxNode.netNodeFanSpeed])]))/2            
                
 		nodeWeight[node.nId] = nw
 
@@ -185,7 +222,7 @@ conn.query(sqlQuery)
 
 r = conn.store_result()
 
-nodeList = createNodes(r)
+(nodeList,maxNode) = createNodes(r)
 
 for node in nodeList:
 	node.display()
@@ -197,6 +234,6 @@ print gw
 pw = getWeights("ParamsCredit.txt")
 print pw	
 
-getNodeWeights(nodeList,pw,gw)
+getNodeWeights(nodeList,maxNode,pw,gw)
 	
 conn.close()
