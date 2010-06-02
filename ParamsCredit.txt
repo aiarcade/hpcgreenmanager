@@ -1,9 +1,9 @@
 powerUsage:5
-memUsage:4
+memUsage:2
 nwSRUsage:3
 performance:4
 cpuTemp:3
-cpuLoad:4
+cpuLoad:5
 cpuSpeed:5
-cpuCache:3
+cpuCache:2
 fanSpeed:4

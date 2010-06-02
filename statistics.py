@@ -14,9 +14,12 @@ class stat:
 
 	def histogram(list,binSize):
                 
-                if(len(list)<binSize):
-                        return
+		if(len(list)<binSize):
+                        #return
+			binSize = len(list)
                                 
+		print list
+
                 #sorting the list in descending order
                 list = sorted(list,reverse=True)
                 listUnique = []
@@ -33,6 +36,7 @@ class stat:
                 i =1
                 j =1
                 binWidth = math.floor(len(listUnique)/binSize)
+
                 for x in listUnique:
                         # check if the value falls in a new bin
                         if(i==binWidth):
