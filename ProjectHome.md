@@ -1,0 +1,3 @@
+The power consumption of a typical High Performance Computing system is very high due to various factors. These include power consumption of the execution nodes,networking components, servers and above all cooling requirements. HPC these days are
+considered as white elephants because of the fact that the running cost overruns the cost of the system during its life time. The proposed system is designed to manage the power
+consumption of HPC and make it Green.
